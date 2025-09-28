@@ -1,68 +1,68 @@
 # HttpRequestConverter
 
-`http_request_tool_converter.py` は、Burp Suite などで取得した HTTP リクエストの生データを、セキュリティ検査ツールのコマンドに変換するシンプルなスクリプトです。ヘッダーやボディを自動的に取り込み、実行可能なテンプレートを出力することで、手作業によるコマンド作成の手間を減らします。変換ロジックはモジュールとして分離されており、wfuzz や sqlmap などのツールごとに独立したビルダーを追加できる構造になっています。
+`http_request_tool_converter.py` is a simple script that converts raw HTTP requests captured with tools such as Burp Suite into commands for security testing utilities. It automatically ingests headers and bodies, outputs executable templates, and reduces the manual effort required to craft commands. The conversion logic is split into modules, making it easy to add independent builders for tools like wfuzz and sqlmap.
 
-## 主な機能
+## Key Features
 
-- HTTP リクエストファイルを解析し、メソッド・パス・ヘッダー・ボディを抽出
-- `X-Forwarded-Proto` ヘッダーの有無からスキーム (http/https) を自動判定
-- wfuzz 向けの `-X` や `-H` オプションを自動組み立て
-- ffuf 向けに `-w` `-H` `-d` などのテンプレートを生成
-- curl 向けに `-X` や `-H`, `--data-raw` を組み合わせたリクエスト例を出力
-- sqlmap 向けにメソッド指定、リクエストボディ、主要ヘッダー (`User-Agent`, `Cookie`, `Referer`, `Host`) などを適切に配置
-- 追加ヘッダーも `--headers` オプションでまとめて反映
-- 生成後の調整ポイント（FUZZ や `*` の挿入箇所）をメッセージで案内
+- Parses HTTP request files to extract the method, path, headers, and body
+- Automatically determines the scheme (http/https) based on the presence of the `X-Forwarded-Proto` header
+- Assembles `-X` and `-H` options for wfuzz
+- Generates templates with options such as `-w`, `-H`, and `-d` for ffuf
+- Outputs curl request examples combining `-X`, `-H`, and `--data-raw`
+- Arranges method specification, request body, and key headers (`User-Agent`, `Cookie`, `Referer`, `Host`) for sqlmap
+- Applies additional headers collectively through the `--headers` option
+- Provides guidance on post-generation tweaks (e.g., where to insert FUZZ or `*`)
 
-## 必要要件
+## Requirements
 
-- Python 3.8 以上
-- 追加の外部ライブラリは不要（標準ライブラリのみを使用）
+- Python 3.8 or higher
+- No additional external libraries required (standard library only)
 
-wfuzz および sqlmap の実行には各ツールのインストールが別途必要です。
+Running wfuzz or sqlmap requires installing each tool separately.
 
-## セットアップ
+## Setup
 
 ```bash
 git clone https://github.com/<your-account>/HttpRequestConverter.git
 cd HttpRequestConverter
-python3 --version  # Python 3.8 以上であることを確認
+python3 --version  # Ensure Python 3.8 or higher
 ```
 
-## プロジェクト構成
+## Project Structure
 
 ```
 .
-├── http_request_tool_converter.py  # CLI エントリポイント
+├── http_request_tool_converter.py  # CLI entry point
 └── tool_builders/
-    ├── __init__.py                # レジストリと共有データクラス
-    ├── sqlmap.py                  # sqlmap 用コマンドビルダー
-    └── wfuzz.py                   # wfuzz 用コマンドビルダー
+    ├── __init__.py                # Registry and shared data classes
+    ├── sqlmap.py                  # Command builder for sqlmap
+    └── wfuzz.py                   # Command builder for wfuzz
 ```
 
-`tool_builders` パッケージは、対象ツールごとの「ビルダー」モジュールを登録する仕組みを提供します。CLI から `--tool` で指定できる値は、レジストリに登録されたビルダーに応じて自動的に増減します。
+The `tool_builders` package provides a mechanism for registering builder modules for each supported tool. The available values for the `--tool` option increase or decrease automatically based on the builders registered in the registry.
 
-## 使い方
+## Usage
 
-1. Burp Suite やブラウザの開発者ツールから HTTP リクエストを **生の形式で保存** します。
-2. 保存したファイルをスクリプトに渡し、`--tool` オプションで変換先を指定します。
+1. Save the HTTP request **in raw format** from Burp Suite or your browser’s developer tools.
+2. Pass the saved file to the script and specify the target converter with the `--tool` option.
 
 ```bash
-# 例: wfuzz 形式に変換
+# Example: Convert to the wfuzz format
 python3 http_request_tool_converter.py --tool wfuzz request.txt
 
-# 例: ffuf 形式に変換
+# Example: Convert to the ffuf format
 python3 http_request_tool_converter.py --tool ffuf request.txt
 
-# 例: curl コマンドに変換
+# Example: Convert to a curl command
 python3 http_request_tool_converter.py --tool curl request.txt
 
-# 例: sqlmap 形式に変換
+# Example: Convert to the sqlmap format
 python3 http_request_tool_converter.py --tool sqlmap request.txt
 ```
 
-実行すると、指定したツールのサンプルコマンドが出力されます。必要に応じて、攻撃ポイントに `FUZZ` や `*` を挿入してから使用してください。
+The script outputs sample commands for the specified tool. Insert `FUZZ` or `*` at attack points as needed before running them.
 
-## HTTP リクエストファイルの例
+## Example HTTP Request File
 
 ```
 POST /search HTTP/1.1
@@ -74,40 +74,39 @@ Content-Type: application/x-www-form-urlencoded
 query=test
 ```
 
-上記リクエストを `request.txt` として保存し、wfuzz 用に変換した場合の出力例:
+If you save the above request as `request.txt` and convert it for wfuzz, the output looks like this:
 
 ```
-===== wfuzz コマンド =====
-wfuzz -c -w /usr/share/seclists/Fuzzing/special-chars.txt -u "http://example.com/search" -X POST -d "query=test" -H "User-Agent: Mozilla/5.0" -H "Cookie: session=abcd" -H "Content-Type: application/x-www-form-urlencoded"
+===== wfuzz Command =====
+wfuzz -c -w /usr/share/seclists/Fuzzing/special-chars.txt -u "http://example.com/search" -X POST -d "query=test" -H "User-Agent:
+ Mozilla/5.0" -H "Cookie: session=abcd" -H "Content-Type: application/x-www-form-urlencoded"
 👉 Replace value with 'FUZZ' to test injection points.
 ```
 
-sqlmap を指定した場合の出力例:
+When you target sqlmap, the output looks like this:
 
 ```
-===== sqlmap コマンド =====
+===== sqlmap Command =====
 sqlmap -u "http://example.com/search" --method=POST --data="query=test" -A "Mozilla/5.0" --cookie="session=abcd" --headers="Content-Type: application/x-www-form-urlencoded" --level=5 --risk=3
 👉 Insert '*' at desired injection point (e.g., TrackingId=abc*).
 ```
 
-## ツールビルダーの拡張
+## Extending Tool Builders
 
-モジュール化された構成により、新しいツール向けのコマンドテンプレートを簡単に追加できます。
+The modular design makes it easy to add command templates for new tools.
 
-1. `tool_builders/` ディレクトリに `<tool_name>.py` を作成します。
-2. `ToolTemplate` と `registry` をインポートし、`build(method, url, headers, body)`
-   関数を実装して `registry.register("<tool_name>", build)` を呼び出します。
-3. 新しいモジュールを追加した状態でスクリプトを実行すると、`--tool <tool_name>` が選択肢に加わります。
+1. Create `<tool_name>.py` in the `tool_builders/` directory.
+2. Import `ToolTemplate` and `registry`, implement the `build(method, url, headers, body)` function, and call `registry.register("<tool_name>", build)`.
+3. Once the new module is in place, running the script adds `--tool <tool_name>` as an available option.
 
-実装例は既存の `wfuzz.py` や `sqlmap.py` を参照してください。`ToolTemplate` には表示タイトル・生成コマンド・補足メッセージを渡せます。
+Refer to the existing `wfuzz.py` and `sqlmap.py` modules for implementation examples. The `ToolTemplate` accepts a display title, generated command, and supplementary message.
 
-## トラブルシューティング
+## Troubleshooting
 
-- **`[!] Error: ...` と表示される**: 入力ファイルのフォーマットが正しいか確認してください。少なくとも 1 行目に `METHOD PATH HTTP/VERSION` の形式が必要です。
-- **https URL に変換されない**: リクエストに `X-Forwarded-Proto: https` ヘッダーを含めると、自動的に https が選択されます。
-- **生成されたコマンドがそのまま実行できない**: ツールによってはパラメータをエスケープする必要がある場合があります。出力結果を参考に調整してください。
+- **`[!] Error: ...` appears**: Verify that the input file is correctly formatted. The first line must follow the `METHOD PATH HTTP/VERSION` pattern at a minimum.
+- **Conversion does not use https**: Include an `X-Forwarded-Proto: https` header in the request to automatically select https.
+- **Generated commands do not run as-is**: Some tools may require additional parameter escaping. Adjust the output as necessary before executing it.
 
-## ライセンス
+## License
 
-本リポジトリのライセンスが未指定の場合、利用時はリポジトリ作者に確認してください。
-
+If this repository does not specify a license, contact the repository author before using it.
