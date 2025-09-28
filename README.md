@@ -7,6 +7,8 @@
 - HTTP リクエストファイルを解析し、メソッド・パス・ヘッダー・ボディを抽出
 - `X-Forwarded-Proto` ヘッダーの有無からスキーム (http/https) を自動判定
 - wfuzz 向けの `-X` や `-H` オプションを自動組み立て
+- ffuf 向けに `-w` `-H` `-d` などのテンプレートを生成
+- curl 向けに `-X` や `-H`, `--data-raw` を組み合わせたリクエスト例を出力
 - sqlmap 向けにメソッド指定、リクエストボディ、主要ヘッダー (`User-Agent`, `Cookie`, `Referer`, `Host`) などを適切に配置
 - 追加ヘッダーも `--headers` オプションでまとめて反映
 - 生成後の調整ポイント（FUZZ や `*` の挿入箇所）をメッセージで案内
@@ -47,6 +49,12 @@ python3 --version  # Python 3.8 以上であることを確認
 ```bash
 # 例: wfuzz 形式に変換
 python3 http_request_tool_converter.py --tool wfuzz request.txt
+
+# 例: ffuf 形式に変換
+python3 http_request_tool_converter.py --tool ffuf request.txt
+
+# 例: curl コマンドに変換
+python3 http_request_tool_converter.py --tool curl request.txt
 
 # 例: sqlmap 形式に変換
 python3 http_request_tool_converter.py --tool sqlmap request.txt
