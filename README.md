@@ -1,6 +1,6 @@
 # HttpRequestConverter
 
-`http_request_tool_converter.py` は、Burp Suite などで取得した HTTP リクエストの生データを、セキュリティ検査ツールである **wfuzz** および **sqlmap** のコマンドに変換するシンプルなスクリプトです。ヘッダーやボディを自動的に取り込み、実行可能なテンプレートを出力することで、手作業によるコマンド作成の手間を減らします。
+`http_request_tool_converter.py` は、Burp Suite などで取得した HTTP リクエストの生データを、セキュリティ検査ツールのコマンドに変換するシンプルなスクリプトです。ヘッダーやボディを自動的に取り込み、実行可能なテンプレートを出力することで、手作業によるコマンド作成の手間を減らします。変換ロジックはモジュールとして分離されており、wfuzz や sqlmap などのツールごとに独立したビルダーを追加できる構造になっています。
 
 ## 主な機能
 
@@ -26,17 +26,33 @@ cd HttpRequestConverter
 python3 --version  # Python 3.8 以上であることを確認
 ```
 
+## プロジェクト構成
+
+```
+.
+├── http_request_tool_converter.py  # CLI エントリポイント
+└── tool_builders/
+    ├── __init__.py                # レジストリと共有データクラス
+    ├── sqlmap.py                  # sqlmap 用コマンドビルダー
+    └── wfuzz.py                   # wfuzz 用コマンドビルダー
+```
+
+`tool_builders` パッケージは、対象ツールごとの「ビルダー」モジュールを登録する仕組みを提供します。CLI から `--tool` で指定できる値は、レジストリに登録されたビルダーに応じて自動的に増減します。
+
 ## 使い方
 
 1. Burp Suite やブラウザの開発者ツールから HTTP リクエストを **生の形式で保存** します。
-2. 保存したファイルをスクリプトに渡し、ターゲットツール (`wfuzz` または `sqlmap`) を指定します。
+2. 保存したファイルをスクリプトに渡し、`--tool` オプションで変換先を指定します。
 
 ```bash
+# 例: wfuzz 形式に変換
 python3 http_request_tool_converter.py --tool wfuzz request.txt
+
+# 例: sqlmap 形式に変換
 python3 http_request_tool_converter.py --tool sqlmap request.txt
 ```
 
-実行すると、指定したツールのサンプルコマンドが出力されます。必要に応じて、攻撃ポイントに `FUZZ` もしくは `*` を挿入してから使用してください。
+実行すると、指定したツールのサンプルコマンドが出力されます。必要に応じて、攻撃ポイントに `FUZZ` や `*` を挿入してから使用してください。
 
 ## HTTP リクエストファイルの例
 
@@ -65,6 +81,17 @@ sqlmap を指定した場合の出力例:
 sqlmap -u "http://example.com/search" --method=POST --data="query=test" -A "Mozilla/5.0" --cookie="session=abcd" --headers="Content-Type: application/x-www-form-urlencoded" --level=5 --risk=3
 👉 Insert '*' at desired injection point (e.g., TrackingId=abc*).
 ```
+
+## ツールビルダーの拡張
+
+モジュール化された構成により、新しいツール向けのコマンドテンプレートを簡単に追加できます。
+
+1. `tool_builders/` ディレクトリに `<tool_name>.py` を作成します。
+2. `ToolTemplate` と `registry` をインポートし、`build(method, url, headers, body)`
+   関数を実装して `registry.register("<tool_name>", build)` を呼び出します。
+3. 新しいモジュールを追加した状態でスクリプトを実行すると、`--tool <tool_name>` が選択肢に加わります。
+
+実装例は既存の `wfuzz.py` や `sqlmap.py` を参照してください。`ToolTemplate` には表示タイトル・生成コマンド・補足メッセージを渡せます。
 
 ## トラブルシューティング
 
