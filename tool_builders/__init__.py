@@ -43,8 +43,10 @@ registry = ToolRegistry()
 
 
 # Ensure default tool builders are registered on import.
-from . import wfuzz as _wfuzz  # noqa: F401
+from . import curl as _curl  # noqa: F401
+from . import ffuf as _ffuf  # noqa: F401
 from . import sqlmap as _sqlmap  # noqa: F401
+from . import wfuzz as _wfuzz  # noqa: F401
 
 
 __all__ = ["ToolTemplate", "registry"]
